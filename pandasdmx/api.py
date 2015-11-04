@@ -338,12 +338,11 @@ class Request(object):
             self.cache[memcache] = r
         return r
 
-    def _make_key(self, flow_id, key):
+    def _read_structure(self, flow_id):
         '''
-        Download the dataflow def. and DSD and validate 
-        key(dict) against it. 
+        Download the dataflow def. and DSD.
 
-        Return: key(str)
+        Return: (dimensions, constraint)
         '''
         # get the dataflow to thus the DSD ID
         dataflow = self.get('dataflow', flow_id,
@@ -356,7 +355,6 @@ class Request(object):
         # as we are only interested in dimensions for columns, not rows.
         dimensions = [d for d in dsd.dimensions.aslist() if d.id not in
                       ['TIME', 'TIME_PERIOD']]
-        dim_names = [d.id for d in dimensions]
         # Retrieve any ContentConstraint
         try:
             constraint_l = [c for c in dataflow.msg.constraint.aslist()
@@ -365,6 +363,19 @@ class Request(object):
                 constraint = constraint_l[0]
         except:
             constraint = None
+
+        return dimensions, constraint
+
+    def _make_key(self, flow_id, key):
+        '''
+        Download the dataflow def. and DSD and validate
+        key(dict) against it.
+
+        Return: key(str)
+        '''
+        dimensions, constraint = self._read_structure(flow_id)
+        dim_names = [d.id for d in dimensions]
+
         # Validate the key dict
         # First, check correctness of dimension names
         invalid = [d for d in key.keys()
